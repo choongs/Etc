@@ -51,3 +51,202 @@ jobs:
       - name: Echo the greeting's time
         run: echo 'The time was ${{ steps.hello.outputs.time }}.
 ```
+### Event
+
+workflows를 시작하는 방법
+- github event 발생 (Ex: push)
+- 스케쥴러 이벤트
+- 외부 이벤트 (REST API를 통한 webhook 호출)
+
+이벤트를 설정하는 방법은 `on` 이라는 문법을 사용합니다.
+
+```yaml
+# 어느 브랜치 든지 push 이벤트 발생하면 workflows 실행 
+name : workflows name
+on : push
+```
+
+```yaml
+# POSIX cron 문법으로 스케쥴러 작성, every 5분마다 실행
+on:
+  schedule:
+    - cron:  '0 * * * *'
+```
+
+또한 이벤트를 특정브랜치로 한정 지을수 있습니다.
+
+```yaml
+# 마스터 브랜치에 /test라는 폴더에서 push가 발생했을 실행
+on:
+  push:
+    branches:
+      - master
+    #  paths는 옵션, 없을 경우 전체 디렉토리.
+    paths:
+      - 'test/*'
+```
+
+### Runner
+
+workflows는 GitHub-hosted runners 와 self-hosted runners 에서 실행 가능합니다.
+
+##### GitHub-hosted runners
+github에서 가상머신 환경을 제공 합니다, 제공하는 OS는 windows, linux , mac os를 제공하며 실행할때마 새로운 가상머신을 제공합니다.
+runner를 지정 할 때는 `runs-on` 이라는 문법을 사용합니다.
+
+###### 하드웨어 리소스 
+- 2-core CPU
+- 7 GB of RAM memory
+- 14 GB of SSD disk spac
+
+``` yaml
+# ubuntu 머신에서 실행.
+runs-on: ubuntu-latest
+```
+
+*** 특정 IP 리스트만 허용하는 github를 사용하면  Github-hosted runners를 사용할 수 없다.
+
+
+##### self-hosted runners
+로컬에서 workflows 실행 환경을 구성이 가능합니다. 모든 self-hosted runner는 `self-hosted` 를 사용합니다.
+그외에 추가적으로 OS type과 architecture type을 설정 할 수 있습니다.
+
+```yaml
+# any self-hosted runner
+runs-on: self-hosted
+
+# max os
+runs-on: [self-hosted, macos]
+
+#64비트 리눅스
+runs-on: [self-hosted, linux, x64]
+
+```
+
+### checkout action
+표준으로 제공하는  action들을 사용할 수 있지만 특히나 checkout action은 빌드와 테스트 또는 지속적인 통합을 위해서 반드시 포함되어야하는 action입니다.
+
+```
+- uses: actions/checkout@v2
+
+```
+
+
+### About YAML syntax for workflows
+
+#### `name`
+name은 workflow의 이름입니다, 생략이 가능하면 생략시 디폴트 값으로 workflow file 이름이 설정됩니다.
+
+#### `on`
+
+필수값입니다. workflow를 실행하기위하 조건이됩니다. 위에서도 설명했듯이 workflows를 실행하는 방법은 3가지가 존재합니다. 
+push, PR  같은  github 이벤트로 실행하는 방법과 스케쥴링 걸어두어서 사용하는 방법, 마지막으로 외부 이벤트( webhook)로 실행하는 방법이 존재합니다.
+
+``` yaml
+# only push
+on: push
+
+# push or pull request
+on: [push, pull_request]
+
+```
+
+##### `on.<push|pull_request>.<branches|tags>`
+push, pull request 이벤트가 특정 브랜치 혹은  tags에서 발생할 때 실행하는 방법 .
+
+```yaml
+on:
+  push:
+    branches:    
+      - master         # Push events on master branch
+    # Sequence of patterns matched against refs/tags
+    tags:        
+      - v1             # Push events to v1 tag
+      - v1.*           # Push events to v1.0, v1.1, and v1.9 tags
+```
+
+##### `on.<push|pull_request>.paths`
+push, pull request가 특정 폴더를 포함해서 발생할 때 실행하는 방법.
+
+```yaml
+on:
+  push:
+  #java 파일을 push 할때마다 실행 , 와일드 카드 사용가능 . paths 또한 생략 가능 생략시 모든 파일및 디렉토리가 대상.
+    paths:
+    - '**.java
+```
+
+##### `on.schedule`
+
+POSIX cron 문법을 사용하여 UTC 타임의 스케쥴링을 통한 workflows 실행도 가능합니다.
+
+```yaml
+on:
+  schedule:
+    # every 15분
+    - cron:  '*/15 * * * *'
+```
+
+#### `env`
+workflows내 모든 job 과 step에서 사용가능한 환경변수를 설정 할 수 있습니다.
+Ex) `jobs.<job_id>.env `, `jobs.<job_id>.steps.env`
+
+만약 동일한 이름의 환경변수가 존재하면, 모든 환경변수는 오버라이딩이 된다고 생각하시면 됩니다. Step이 실행하는동안은 workflows 및 job에 대한 동일한 이름의 환경변수값을 Step에서 사용되는 값으로 대체합니다.Job이 실행되는 동안은 workflows에 대한 동일한 이름의 환경변수값을 대체합니다.
+
+``` yaml
+env:
+  SERVER: production
+```
+
+#### `Jobs` 
+Jobs는 기본적으로 하나 이상의 Job으로 실행되고, 기본적으로 job은 병렬로 처리되어진다. 순차적으로 job을 처리하기 위해서는 
+`jobs.<job_id>.needs` 키워드를 사용해야한다.
+
+각각의 Job은 `runs-on`키워드에 정의된 환경에서 실행되어집니다.
+
+##### `jobs.<job_id>`
+각각 Job은 반드시 id를 가져야하며 Jobs내에서 유일한 값이 되어야합니다. `job_id`는 문자 혹은 _ 값으로 시작해야하며, 영문자,숫자 -,__만 포함되어야 합니다.
+
+```yaml
+jobs:
+  my_first_job:
+    name: My first job
+  my_second_job:
+    name: My second job
+```
+
+####`jobs.<job_id>.name`
+github에서 보여지는  job 이름 
+
+##### `jobs.<job_id>.needs`
+기본적으로 job은 병렬로 처리되어지지만 `needs` 키워드를 사용하여서 순차적으로 처리 할 수가 있습니다.
+
+```
+jobs:
+# job2가 수행하기 위해서는 job1이 성공적으로 수행되어야 한다.
+  job1:
+  job2:
+    needs: job1
+# job3이 실행되기 위해서는 job1, job2가 성공적으로 수행되어야 한다.    
+  job3:
+    needs: [job1, job2]
+
+```
+
+* 작업이 실패를 기본적으로 건너 뛰지만, 조건문을 사용해서 작업을 진행 하게도 가능합니다.
+
+##### `jobs.<job_id>.runs-on`
+`runs-on` 키워드는 job이 실행되어지는 환경을 설정하는 부분입니다 (필수값)
+실행되는 환경은 GitHub-hosted runner 와 self-hosted runner가 있습니다.
+
+##### `jobs.<job_id>.env`
+job 아래 모든 Step에서 사용가능한 환경변수를 설정가능합니다.
+ ```yaml
+ jobs:
+  job1:
+    env:
+      FIRST_NAME: Mona
+ ```
+ 
+##### `jobs.<job_id>.if`
+조건이 충족되는 경우에만 job을 실행 할 수 있게 합니다.
