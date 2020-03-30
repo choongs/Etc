@@ -16,6 +16,15 @@ workflows는 github 이벤트가 발생했을때나 스케쥴러로 통해서 �
 
 workflows는 YAML문법을 이용해서 작성을 합니다.
 
+## 사용제한 
+* Job execution time : 각각의 Job은 최대 6시간까지 가능하고, 6시간 넘는 경우 Job은 종료되고 실패처리 된다. 단 self-hosted runner는 상관없음.
+* Workflow run time : workflow 수행시간은 최대 72시간, 제한시간을 오버하느 경우 workflow 취소 처리된다.
+* Job queue time : self-hosted runner은 최대 24시간동안 유지 할 수 있는 Queue(작업대기열)를 제공한다. 24시간내에서 Job이 실행되지 않으면 job은 종료되고 실패 처리된다. Github-hosted runners은 상관없음.
+* API requests : Repository 내에서 모든 action에서 발생하는 Api call은 1시간에 1000개 까지 가능합니다. 추가로 발생하는 api는 실패로 처리되어진다.
+* Concurrent jobs : github 등급에 따라 차등하여 제한.
+* Job matrix : Job은 최대 256개를 생성할 수 있습니다.
+
+
 ## workflow 만드는 방법
 - github이 repository를 분석해서 적절한 템플릿을 제공.
 - 마켓플레이스에 공유된 workflow를 가져오는 방법.
