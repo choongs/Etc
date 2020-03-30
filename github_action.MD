@@ -17,7 +17,7 @@ workflows는 github 이벤트가 발생했을때나 스케쥴러로 통해서 �
 workflows는 YAML문법을 이용해서 작성을 합니다.
 
 ## workflow 만드는 방법
-- github이 repository를 분석해서 적절한 템플릿음 제공.
+- github이 repository를 분석해서 적절한 템플릿을 제공.
 - 마켓플레이스에 공유된 workflow를 가져오는 방법.
 - workflows 파일을 직접 생성하는 방법.
 
@@ -250,3 +250,87 @@ job 아래 모든 Step에서 사용가능한 환경변수를 설정가능합니�
  
 ##### `jobs.<job_id>.if`
 조건이 충족되는 경우에만 job을 실행 할 수 있게 합니다.
+
+##### `jobs.<job_id>.steps`
+하나의 Job안에 task들을 순차적으로 실행 가능합니다. Steps은 커맨드, 설정, repository 또는 Docker에 있는 github action을 수행 할 수 있습니다. Step은 Job과 다르게 단계별로 순차적으로 수행됩니다. 각각의 Step은 개별 프로세스에서 수행되어지고, 수행되어지는 환경의 워크스페이스 및 파일시스템에 접근 가능합니다. 환경변수에 대한 변경사항은 Step간 지속되지 않습니다. workflow 한계내에서 무한으로 수행이가능합ㄴ디.
+
+```yaml
+# Example
+name: Greeting from Mona
+
+on: push
+
+jobs:
+  my-job:
+    name: My Job
+    runs-on: ubuntu-latest
+    steps:
+    - name: Print a greeting
+      env:
+        MY_VAR: Hi there! My name is
+        FIRST_NAME: Mona
+        MIDDLE_NAME: The
+        LAST_NAME: Octocat
+      run: |
+        echo $MY_VAR $FIRST_NAME $MIDDLE_NAME $LAST_NAME.
+```
+
+##### `jobs.<job_id>.steps.id`
+유니크한 식별자이며, github에서 제공하는 context를 사용 할 수 있습니다.
+
+
+##### `jobs.<job_id>.steps.name`
+Stops 이름 , Stpes실행시 로그에서 노출되어지는 이름.
+
+
+##### `jobs.<job_id>.steps.uses`
+동일한 저장소나 공개된 저장소, 혹은 Docker에 이미 정의된 Action들을 사용할 수 있습니다.
+Action을 사용할 때는 version이나 tag number를 같이 사용하길 강력하게 권장합니다, version을 정의하지 않은 경우에는 workflows 가 정상적으로 실행이 되지 않을수가 있습니다.
+
+```yaml
+steps:    
+  - uses: actions/setup-node@74bc508 # Reference a specific commit
+  - uses: actions/setup-node@v1      # Reference the major version of a release   
+  - uses: actions/setup-node@v1.2    # Reference a minor version of a release  
+  - uses: actions/setup-node@master  # Reference a branch
+```
+
+##### `jobs.<job_id>.steps.run`
+가상환경내에서 쉘을 사용하여 명령어를 사용합니다. 기본적으로 비로그인상태에서 명령어를 실행합니다. 또한 다른 쉘을 선택 할 수 있고 사용자가 정으해서 사용할 수 있습니다. 모든 플랫폼에서 모든 쉘을 사용할 수 없습니다. 쉘의 종류에 따라 지원되는 플랫폼에 제한이 있습니다.
+
+개별 run은 가상환경내에서 새로운 프로세스에서 실행되어지고, 멀티라인으로 커맨드를 실행 할 수 있습니다. 멀티라인의 실행되는 커맨드는 동일한 프로세스에서 실행되어집니다.
+
+``` yaml
+# single-line command
+- name: Install Dependencies
+  run: npm install
+```
+
+
+```yaml
+# multi-line command
+- name: Clean install dependencies and build
+  run: |
+    npm ci
+    npm run build
+```
+
+
+```yaml
+# 삭제 수행시 디렉토리 지정 (working-directory)
+- name: Clean temp directory
+  run: rm -rf *
+  working-directory: ./temp
+```
+
+
+```yaml
+
+# 쉘을 bash에서 사용하기 
+steps:
+  - name: Display the path
+    run: echo $PATH
+    shell: bash
+```
+
+
